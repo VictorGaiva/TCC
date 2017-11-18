@@ -1,0 +1,10 @@
+[
+    ["http://radiostream.ufms.br:8000/radioufms", "radioufms"],
+    ["http://184.154.195.202:9050", "uniderpfm"],
+    ["http://184.154.195.202:9072", "capitalfm"],
+    ["http://ice.paineldj3.com.br:8006/live", "metropolitana"],
+    ["http://transamerica.crossradio.com.br:9100/live.aac", "transamerica"],
+    ["http://17483.live.streamtheworld.com:3690/JP_SP_FM_SC", "jovempan"],
+    ["https://listen.shoutcast.com/89fmaradiorock", "radiorocksp"],
+    ["http://174-36-1-94.webnow.net.br/dumont.aac", "radiodumond"]
+]
