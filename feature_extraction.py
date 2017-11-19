@@ -2,82 +2,84 @@
 import os
 import csv
 import sys
-import numpy as np
-import matplotlib.pyplot as plt
+import librosa
+from threading import Thread
+#import numpy as np
+#import matplotlib.pyplot as plt
 
-def GetFeaturesPymir(audioData, feature):
+def write_as_csv(filepath, data):
+    """
+    Writes given data into the given file as a csv file
+    """
+    with open(filepath, 'w') as csvfile:
+        spam_writer = csv.writer(csvfile, delimiter=',', quotechar='\'')
+        #todos atributos
+        for line in data:
+            newlist = []
+            for val in line:
+                newlist.append(val[0])
+            spam_writer.writerow(newlist)
+
+def get_features(filepath):
     """
     Returns a vector with the relevant atributs given an audioframe
     """
-    import pymir
-    windowSize = 512
-    attrList = ['frameMAX', 'frameMEA', 'frameRMS', 'frameZCR', 'SpectMEA', 'SpectRFF', 'SpectKUR']
 
     features = []
-    print('    Decoposing into frames')
-    fixedFrames = wavData.frames(windowSize, np.hamming)
+    print(' ├-┐Opening file \'', filepath, '\'')
+    audio_file, sample_rate = librosa.core.load(filepath)
+
+    print(' | |Sample rate =', sample_rate)
+
+    print(' | |Decomposing into overlaping frames')
+    frames = librosa.util.frame(audio_file, 2048, 1536)
 
     i = 0
-    total = len(fixedFrames)
-    if feature == -1:
-        print('    Calculating features for each frame')
-    else:
-        print('    Calculating \''+attrList[feature]+'\' for each frame')
-    for frame in fixedFrames:
+    total2 = len(frames)
+
+    print(' | |Computing features')
+    for frame in frames:
         #print stuff
         i = i + 1
-        sys.stdout.write('\r      ' + str(i) + '/' + str(total))
+        sys.stdout.write('\r | └-┐' + str(i) + '/' + str(len(frame)))
         sys.stdout.flush()
         #default calc
-        if feature == -1:
-            #Calc some stuff
-            currSpectr = frame.spectrum()
-            currEnergy = frame.energy()
+        #Calc some stuff
+        features.append(librosa.feature.chroma_stft(y=frame, sr=sample_rate))
+        #currEnergy = frame.energy()
 
-            #Temporal features
-            frameMAX = currEnergy.max()
-            frameMEA = np.median(currEnergy)
-            frameRMS = frame.rms()
-            frameZCR = frame.zcr()
+        #Temporal features
+        #frameMAX = currEnergy.max()
+        #frameMEA = np.median(currEnergy)
+        #frameRMS = frame.rms()
+        #frameZCR = frame.zcr()
 
-            #Spectral features
-            #currCTD = currSpectr.centroid() #division by zero
-            #currCHR = currSpectr.chroma()   #finda a good use to this
-            #currFLT = currSpectr.flatness() #mean() got an unexpected keyword argument 'axis'
-            SpectMEA = currSpectr.mean()
-            SpectRFF = currSpectr.rolloff()
-            SpectKUR = currSpectr.kurtosis()
+        #Spectral features
+        #currCTD = currSpectr.centroid() #division by zero
+        #currCHR = currSpectr.chroma()   #finda a good use to this
+        #currFLT = currSpectr.flatness() #mean() got an unexpected keyword argument 'axis'
+        #SpectMEA = currSpectr.mean()
+        #SpectRFF = currSpectr.rolloff()
+        #SpectKUR = currSpectr.kurtosis()
 
-            features.append([frameMAX, frameMEA, frameRMS, frameZCR, SpectMEA, SpectRFF, SpectKUR])
-        #specific features
-        else:
-            #0 e 1
-            if feature == 0 or feature == 1:
-                currEnergy = frame.energy()
-                if feature == 0:
-                    features.append(currEnergy.max())
-                if feature == 1:
-                    features.append(np.median(currEnergy))
-            #2 e 3
-            elif feature == 2:
-                features.append(frame.rms())
-            elif feature == 3:
-                features.append(frame.zcr())
-            #4, 5 e 6
-            else:
-                currSpectr = frame.spectrum()
-                if feature == 4:
-                    features.append(currSpectr.mean())
-                elif feature == 5:
-                    features.append(currSpectr.rolloff())
-                elif feature == 6:
-                    features.append(currSpectr.kurtosis())
+        #features.append([frameMAX, frameMEA, frameRMS, frameZCR, SpectMEA, SpectRFF, SpectKUR])        
     #post print stuff
     sys.stdout.write('\n')
     sys.stdout.flush()
 
     # Compute the spectral flux
     return features
+
+def extract_and_save(input_path, output_path):
+    """
+    Extracts the features of given file and saves it into given output path
+    """
+    print(' |Extracting features')
+    feature_vector = get_features(input_path)
+
+    print(' |Writing data to file : \"' + output_path + '\"')
+    write_as_csv(output_path, feature_vector)
+    print(' |Done.')
 
 if __name__ == "__main__":
     print('Feature extractor')
@@ -86,93 +88,22 @@ if __name__ == "__main__":
         exit()
     #Diretorio de entrada
     input_directory = sys.argv[1]
+
     #Diretorio de saida
-    output_directory = './csv/' + "".join(input_directory.split('/')[1:])
-
-    feature = -1
-    if len(sys.argv) > 2:
-        #Sobreescreve arquivos de saida ja existentes
-        if sys.argv[2] == '-w':
-            option = 1
-        #Faz um append de atributo em cada linha da saida
-        elif sys.argv[2] == '-a':
-            if len(sys.argv) != 4:
-                print("ERROR:Must specify unique feature when\
-                       appending new data to an existing file.")
-                exit()
-            option = 2
-        #atributo especifico ou todos?
-        if len(sys.argv) == 4:
-            feature = int(sys.argv[3])
-
-        #Escreve todos atributos caso arquivo nao exista
-        else:
-            option = 0
-    #Escreve todos atributos caso arquivo nao exista
-    else:
-        option = 0
+    output_directory = './csv/'
 
     Files = os.listdir(input_directory)
     total = len(Files)
-    i = 1
+    aux = 1
+    jobs = []
+    
     for filename in Files:
-        print('Now processing file ' + str(i) + '\\' + str(total) + ': '+filename)
-        i = i + 1
+        print('Now processing file ' + str(aux) + '/' + str(total) + ': '+filename)
         newFile = "".join(filename.split('.')[:-1]) + '.csv'
-        #Se a opcao for '0' e o arquivo de saida ja exista, pule este arquivo
-        if option == 0 and os.path.isfile(os.path.join(output_directory, newFile)):
-            print('File already processed. Jumping to next file.\n')
-            continue
-
-        #Abertura do arquivo de audio
-        print('  Opening file')
-        wavData = pymir.AudioFile.open(os.path.join(input_directory, filename))
-
-        #Escrita normal
-        if option != 2:
-            #Computa atributos
-            print('  Extracting features')
-            featureVector = GetFeaturesPymir(wavData, feature)
-            print('  Writing data to file : \"' + newFile + '\"')
-
-            with open(os.path.join(output_directory, newFile), 'w') as csvfile:
-                spamWriter = csv.writer(csvfile, delimiter=',', quotechar='\"')
-                #todos atributos
-                if feature == -1:
-                    spamWriter.writerow(attrList)
-                    spamWriter.writerows(featureVector)
-                #apenas 1 atributo
-                else:
-                    #escreve cabecalho
-                    spamWriter.writerow(attrList[feature])
-                    #escreve dados
-                    spamWriter.writerows(featureVector)
-
-        #append
-        else:
-            #Computa atributos
-            print('  Extracting features')
-            featureVector = GetFeaturesPymir(wavData, feature)
-
-            print('  Appending new feature to file : \"' + newFile + '.tmp\"')
-            #open existing file
-            with open(os.path.join(output_directory, newFile), 'r') as csvfile1:
-                #open temporary file
-                with open(os.path.join(output_directory, newFile+'.tmp'), 'w') as csvfile2:
-                    spamWriter = csv.writer(csvfile2, delimiter=',', quotechar='\"')
-                    firstRow = True
-                    #para cada linha do arquivo original
-                    for row in csv.reader(csvfile1):
-                        #se for o header, adicione o nome da nova coluna
-                        if firstRow:
-                            firstRow = False
-                            rowCp = row[:]
-                            rowCp.append(attrList[feature])
-                            spamWriter.writerow(rowCp)
-                        #se for o resto, adicione o atributo
-                        else:
-                            #remove o primeiro elemento e coloca ele no final da row atual
-                            rowCp = row[:]
-                            rowCp.append(featureVector.pop(0))
-                            spamWriter.writerow(rowCp)
-                    #renomeia os arquivos
+        input_file = os.path.join(input_directory, filename)
+        output_file = os.path.join(output_directory, newFile)
+        aux = aux + 1
+        #Computa atributos
+        jobs.append(Thread(target=extract_and_save, args=(input_file, output_file)))
+        jobs[0].start()
+        jobs[0].join()
