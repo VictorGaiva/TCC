@@ -2,8 +2,13 @@
 import os
 import csv
 import sys
-import librosa
+import time
+from queue import Queue
 from threading import Thread
+
+import librosa
+
+
 #import numpy as np
 #import matplotlib.pyplot as plt
 
@@ -24,25 +29,16 @@ def get_features(filepath):
     """
     Returns a vector with the relevant atributs given an audioframe
     """
-
     features = []
-    print(' ├-┐Opening file \'', filepath, '\'')
     audio_file, sample_rate = librosa.core.load(filepath)
-
-    print(' | |Sample rate =', sample_rate)
-
-    print(' | |Decomposing into overlaping frames')
     frames = librosa.util.frame(audio_file, 2048, 1536)
-
     i = 0
     total2 = len(frames)
-
-    print(' | |Computing features')
     for frame in frames:
         #print stuff
         i = i + 1
-        sys.stdout.write('\r | └-┐' + str(i) + '/' + str(len(frame)))
-        sys.stdout.flush()
+        #sys.stdout.write('\r' + str(i) + '/' + str(total2))
+        #sys.stdout.flush()
         #default calc
         #Calc some stuff
         features.append(librosa.feature.chroma_stft(y=frame, sr=sample_rate))
@@ -62,7 +58,7 @@ def get_features(filepath):
         #SpectRFF = currSpectr.rolloff()
         #SpectKUR = currSpectr.kurtosis()
 
-        #features.append([frameMAX, frameMEA, frameRMS, frameZCR, SpectMEA, SpectRFF, SpectKUR])        
+        #features.append([frameMAX, frameMEA, frameRMS, frameZCR, SpectMEA, SpectRFF, SpectKUR])
     #post print stuff
     sys.stdout.write('\n')
     sys.stdout.flush()
@@ -74,15 +70,42 @@ def extract_and_save(input_path, output_path):
     """
     Extracts the features of given file and saves it into given output path
     """
-    print(' |Extracting features')
     feature_vector = get_features(input_path)
-
-    print(' |Writing data to file : \"' + output_path + '\"')
     write_as_csv(output_path, feature_vector)
-    print(' |Done.')
+
+def worker():
+    """
+    Worker for processing the data
+    """
+    while True:
+        item = filenames.get()
+
+        if item is None:
+            break
+
+        file_size = os.path.getsize(item[0])
+        file_size = file_size/1024
+        if file_size > 1024:
+            file_size = str(int(file_size/1024)) + 'MB'
+        else:
+            file_size = str(int(file_size)) + 'KB'
+
+        print('Processing file', item[0], 'with', file_size, '\b.')
+
+        now = time.time()
+
+        extract_and_save(item[0], item[1])
+
+        now = time.time() - now
+
+        print('Finished file', item[0], 'in', int(now), 'seconds.\n')
+
+        filenames.task_done()
+
+filenames = Queue()
 
 if __name__ == "__main__":
-    print('Feature extractor')
+    print('Feature extraction')
     if len(sys.argv) < 2:
         print("Use: ", sys.argv[0], " <audio files directory> [option]")
         exit()
@@ -92,18 +115,30 @@ if __name__ == "__main__":
     #Diretorio de saida
     output_directory = './csv/'
 
-    Files = os.listdir(input_directory)
-    total = len(Files)
-    aux = 1
-    jobs = []
-    
-    for filename in Files:
-        print('Now processing file ' + str(aux) + '/' + str(total) + ': '+filename)
+    files_list = os.listdir(input_directory)
+    workers = []
+
+    #Compute the names for the input and output
+    for filename in files_list:
         newFile = "".join(filename.split('.')[:-1]) + '.csv'
         input_file = os.path.join(input_directory, filename)
         output_file = os.path.join(output_directory, newFile)
-        aux = aux + 1
-        #Computa atributos
-        jobs.append(Thread(target=extract_and_save, args=(input_file, output_file)))
-        jobs[0].start()
-        jobs[0].join()
+        filenames.put([input_file, output_file])
+
+    workersCount = 2
+
+    #Create thread objects
+    for x in range(0, workersCount):
+        w = Thread(target=worker)
+        w.start()
+        workers.append(w)
+
+    #Wait for list to empty
+    now = time.time()
+    filenames.join()
+    now = time.time() - now
+    print(int(now), 'seconds.')
+
+    #Create thread objects
+    for x in range(0, workersCount):
+        filenames.put(None)
