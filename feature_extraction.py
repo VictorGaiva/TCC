@@ -2,15 +2,18 @@
 import os
 import csv
 import sys
+
+import multiprocessing
 import time
-from queue import Queue
-from threading import Thread
 
 import librosa
+import librosa.display
 
+import numpy as np
+import matplotlib.pyplot as plt
 
-#import numpy as np
-#import matplotlib.pyplot as plt
+#
+FOO_ARGUMENTS = []
 
 def write_as_csv(filepath, data):
     """
@@ -23,7 +26,8 @@ def write_as_csv(filepath, data):
             newlist = []
             for val in line:
                 newlist.append(val[0])
-            spam_writer.writerow(newlist)
+            spam_writer.writerow(line)
+
 
 def get_features(filepath):
     """
@@ -31,17 +35,11 @@ def get_features(filepath):
     """
     features = []
     audio_file, sample_rate = librosa.core.load(filepath)
-    frames = librosa.util.frame(audio_file, 2048, 1536)
-    i = 0
-    total2 = len(frames)
-    for frame in frames:
-        #print stuff
-        i = i + 1
-        #sys.stdout.write('\r' + str(i) + '/' + str(total2))
-        #sys.stdout.flush()
-        #default calc
-        #Calc some stuff
-        features.append(librosa.feature.chroma_stft(y=frame, sr=sample_rate))
+    #frames = librosa.util.frame(audio_file, 2048, 1536)
+    features.append(librosa.feature.chroma_stft(y=audio_file, n_fft=2048, hop_length=512))
+    #for frame in frames:
+        #
+        #features.append(librosa.feature.chroma_stft(y=frame, sr=sample_rate))
         #currEnergy = frame.energy()
 
         #Temporal features
@@ -59,50 +57,66 @@ def get_features(filepath):
         #SpectKUR = currSpectr.kurtosis()
 
         #features.append([frameMAX, frameMEA, frameRMS, frameZCR, SpectMEA, SpectRFF, SpectKUR])
-    #post print stuff
-    sys.stdout.write('\n')
-    sys.stdout.flush()
-
-    # Compute the spectral flux
     return features
 
-def extract_and_save(input_path, output_path):
+def extract_and_save(input_file, output_file):
     """
     Extracts the features of given file and saves it into given output path
     """
-    feature_vector = get_features(input_path)
-    write_as_csv(output_path, feature_vector)
+    feature_vector = get_features(input_file)
+    write_as_csv(output_file, feature_vector)
 
-def worker():
+
+def extract_from_folder(input_directory, output_directory):
     """
-    Worker for processing the data
+    Extracts the features from all the .wav files in a dir and
+    saves them in correspoding .csv files in the output folder
     """
-    while True:
-        item = filenames.get()
+    #Compute the names for the input and output
+    files_list = os.listdir(input_directory)
 
-        if item is None:
-            break
+    #create list of arguments
+    for filename in files_list:
+        #if filename.split('.')[-1] != '.wav':
+        #    print(filename, "is not a .wav file. Ignoring it.")
+        #    continue
+        #get the input and output paths in the right format
+        input_file = os.path.join(input_directory, filename)
+        new_file = "".join(filename.split('.')[:-1]) + '.csv'
+        output_file = os.path.join(output_directory, new_file)
 
-        file_size = os.path.getsize(item[0])
-        file_size = file_size/1024
-        if file_size > 1024:
-            file_size = str(int(file_size/1024)) + 'MB'
-        else:
-            file_size = str(int(file_size)) + 'KB'
+        #extract features
+        FOO_ARGUMENTS.append([input_file, output_file])
+    #"""
+    #start processing
+    now = time.time()
+    for argument in FOO_ARGUMENTS:
+        print("Processing data from", argument[0])
+        extract_and_save(argument[0], argument[1])
+        print("Saved atributes from", argument[0], "into", argument[1])
+    print(int(time.time() - now), 'seconds.')
 
-        print('Processing file', item[0], 'with', file_size, '\b.')
+    """
+    #multiprocess (it has not speedup)
+    workers = []
+    for x in range(4):
+        workers.append(multiprocessing.Process(target=worker, args=(x, 0)))
 
-        now = time.time()
+    now = time.time()
+    #
+    for w in workers:
+        w.start()
+    for w in workers:
+        w.join()
+    print(int(time.time() - now), 'seconds.')
+    """
 
-        extract_and_save(item[0], item[1])
 
-        now = time.time() - now
-
-        print('Finished file', item[0], 'in', int(now), 'seconds.\n')
-
-        filenames.task_done()
-
-filenames = Queue()
+def worker(start_i, end_i):
+    print(os.getpid(), ":Processing data from", FOO_ARGUMENTS[start_i][0])
+    extract_and_save(FOO_ARGUMENTS[start_i][0], FOO_ARGUMENTS[start_i][1])
+    print(os.getpid(), "Finished", FOO_ARGUMENTS[start_i][0],
+          ". Saved to", FOO_ARGUMENTS[start_i][1])
 
 if __name__ == "__main__":
     print('Feature extraction')
@@ -110,35 +124,4 @@ if __name__ == "__main__":
         print("Use: ", sys.argv[0], " <audio files directory> [option]")
         exit()
     #Diretorio de entrada
-    input_directory = sys.argv[1]
-
-    #Diretorio de saida
-    output_directory = './csv/'
-
-    files_list = os.listdir(input_directory)
-    workers = []
-
-    #Compute the names for the input and output
-    for filename in files_list:
-        newFile = "".join(filename.split('.')[:-1]) + '.csv'
-        input_file = os.path.join(input_directory, filename)
-        output_file = os.path.join(output_directory, newFile)
-        filenames.put([input_file, output_file])
-
-    workersCount = 2
-
-    #Create thread objects
-    for x in range(0, workersCount):
-        w = Thread(target=worker)
-        w.start()
-        workers.append(w)
-
-    #Wait for list to empty
-    now = time.time()
-    filenames.join()
-    now = time.time() - now
-    print(int(now), 'seconds.')
-
-    #Create thread objects
-    for x in range(0, workersCount):
-        filenames.put(None)
+    extract_from_folder(sys.argv[1], './csv/')
