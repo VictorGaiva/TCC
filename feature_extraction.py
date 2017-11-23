@@ -19,52 +19,96 @@ def write_as_csv(filepath, data):
     """
     Writes given data into the given file as a csv file
     """
-    with open(filepath, 'w') as csvfile:
-        spam_writer = csv.writer(csvfile, delimiter=',', quotechar='\'')
-        #todos atributos
-        for line in data:
-            newlist = []
-            for val in line:
-                newlist.append(val[0])
-            spam_writer.writerow(line)
+    trans = np.array(data)
 
+    with open(filepath + '.csv', 'w') as csvfile:
+        spam_writer = csv.writer(csvfile, delimiter=',', quotechar='\'')
+        for line in trans:
+            spam_writer.writerow(line[0])
+
+def write_as_bin(filepath, data):
+    """
+    Writes given data into the given file as a binary file
+    The extension of the output file starts with '.atr' and ends with
+    the number of atributes corresponding to onde frame
+    """
+    bin_data = np.array(data).tobytes()
+    ext = '.atr' + format(len(data[0][0]), '02d')
+    with open(filepath + ext, 'wb') as bin_file:
+        bin_file.write(bin_data)
 
 def get_features(filepath):
     """
     Returns a vector with the relevant atributs given an audioframe
     """
-    features = []
     audio_file, sample_rate = librosa.core.load(filepath)
-    #frames = librosa.util.frame(audio_file, 2048, 1536)
-    features.append(librosa.feature.chroma_stft(y=audio_file, n_fft=2048, hop_length=512))
-    #for frame in frames:
-        #
-        #features.append(librosa.feature.chroma_stft(y=frame, sr=sample_rate))
-        #currEnergy = frame.energy()
 
-        #Temporal features
-        #frameMAX = currEnergy.max()
-        #frameMEA = np.median(currEnergy)
-        #frameRMS = frame.rms()
-        #frameZCR = frame.zcr()
+    #Temporal features
+    #currEnergy = frame.energy()
 
-        #Spectral features
-        #currCTD = currSpectr.centroid() #division by zero
-        #currCHR = currSpectr.chroma()   #finda a good use to this
-        #currFLT = currSpectr.flatness() #mean() got an unexpected keyword argument 'axis'
-        #SpectMEA = currSpectr.mean()
-        #SpectRFF = currSpectr.rolloff()
-        #SpectKUR = currSpectr.kurtosis()
+    #frameMAX = currEnergy.max()
 
-        #features.append([frameMAX, frameMEA, frameRMS, frameZCR, SpectMEA, SpectRFF, SpectKUR])
-    return features
+    #frameMEA = np.median(currEnergy)
+
+    #chroma
+    #atr_chroma = librosa.feature.chroma_stft(
+    #    y=audio_file,
+    #    frame_length=2048,
+    #    hop_length=512
+    #)
+
+    #root-mean-square energy
+    atr_rmse = librosa.feature.rmse(
+        y=audio_file,
+        frame_length=2048,
+        hop_length=512
+    )
+
+    #zero crossing rate
+    atr_zcr = librosa.feature.zero_crossing_rate(
+        y=audio_file,
+        frame_length=2048,
+        hop_length=512
+    )
+
+    #centroid
+    atr_centroid = librosa.feature.spectral_centroid(
+        y=audio_file,
+        sr=sample_rate,
+        n_fft=2048,
+        hop_length=512
+    )
+
+    #bandwidth
+    atr_bandwidth = librosa.feature.spectral_bandwidth(
+        y=audio_file,
+        n_fft=2048,
+        hop_length=512,
+        centroid=atr_centroid
+    )
+
+    #currFLT = currSpectr.flatness() #mean() got an unexpected keyword argument 'axis'
+
+    #SpectMEA = currSpectr.mean()
+
+    #SpectRFF = currSpectr.rolloff()
+    atr_rolloff = librosa.feature.spectral_rolloff(
+        y=audio_file,
+        n_fft=2048,
+        hop_length=512,
+        roll_percent=0.85
+    )
+
+    #SpectKUR = currSpectr.kurtosis()
+    n_array = np.array([atr_zcr, atr_rmse, atr_centroid, atr_bandwidth, atr_rolloff]).transpose()
+    return n_array
 
 def extract_and_save(input_file, output_file):
     """
     Extracts the features of given file and saves it into given output path
     """
     feature_vector = get_features(input_file)
-    write_as_csv(output_file, feature_vector)
+    write_as_bin(output_file, feature_vector)
 
 
 def extract_from_folder(input_directory, output_directory):
@@ -82,7 +126,7 @@ def extract_from_folder(input_directory, output_directory):
         #    continue
         #get the input and output paths in the right format
         input_file = os.path.join(input_directory, filename)
-        new_file = "".join(filename.split('.')[:-1]) + '.csv'
+        new_file = "".join(filename.split('.')[:-1])
         output_file = os.path.join(output_directory, new_file)
 
         #extract features
