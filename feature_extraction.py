@@ -19,11 +19,9 @@ def write_as_csv(filepath, data):
     """
     Writes given data into the given file as a csv file
     """
-    trans = np.array(data)
-
     with open(filepath + '.csv', 'w') as csvfile:
         spam_writer = csv.writer(csvfile, delimiter=',', quotechar='\'')
-        for line in trans:
+        for line in data:
             spam_writer.writerow(line[0])
 
 def write_as_bin(filepath, data):
