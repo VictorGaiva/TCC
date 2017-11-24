@@ -129,10 +129,16 @@ def write_as_bin(filepath, data):
     with open(filepath + ext, 'wb') as bin_file:
         bin_file.write(bin_data)
 
-if __name__ == "__main__":
+def main():
+    """
+    Main foo
+    """
     print('Feature extraction')
     if len(sys.argv) < 2:
         print("Use: ", sys.argv[0], " <audio files directory> [option]")
         exit()
     #Diretorio de entrada
     extract_from_folder(sys.argv[1], './csv/')
+
+if __name__ == "__main__":
+    main()

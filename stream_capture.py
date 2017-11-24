@@ -3,8 +3,6 @@ import datetime
 from time import sleep
 from threading import Thread
 
-def saveToFile():
-
 def CapStream(stream_url, radioName):
     print("Iniciando captura de ", radioName)
     start = datetime.datetime.now()    
