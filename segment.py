@@ -12,46 +12,103 @@ import librosa.display
 import numpy as np
 import feature_extraction as fe
 
-"""
-152,149410	158,539943	vinheta
-337,893384	342,110814	vinheta
-490,718871	494,791427	vinheta
-702,695017	725,232913	talk
-725,232913	726,810425	vinheta
-945,058387	947,859276	vinheta
-1122,262871	1124,846449	vinheta
-1350,583569	1355,364396	vinheta
-1663,884670	1670,174596	vinheta
-1896,720593	1928,451922	talk
-2125,536275	2129,938821	vinheta
-2401,359397	2404,329304	vinheta
-2596,133822	2600,061504	vinheta
-2883,410001	2886,126380	vinheta
-3059,946457	3086,740014	talk
-3087,589133	3088,913117	vinheta
-3254,728931	3257,594207	vinheta
-3498,269399	3504,088486	vinheta
-"""
-def get_labels(input_path):
+def get_segments(input_path):
     """
-    Returns a dict with the start, end the class of each label from given file
+    Returns a dict with the start, end the class of each label from given file.
     """
-    with open(input_path, 'r') as labels_file:
-        labels = []
-        for line in labels_file:
+    with open(input_path, 'r') as segments_file:
+        segments = []
+        for line in segments_file:
             words = line.split('\t')
-            lb_dict = {}
-            lb_dict['start'] = float(words[0].replace(',', '.'))
-            lb_dict['end'] = float(words[1].replace(',', '.'))
-            lb_dict['class'] = words[2][:-1]
-            labels.append(lb_dict)
-    return labels
+            sg_dict = {}
+            sg_dict['start'] = float(words[0].replace(',', '.'))
+            sg_dict['end'] = float(words[1].replace(',', '.'))
+            sg_dict['class'] = words[2][:-1]
+            segments.append(sg_dict)
+    return segments
+
+def features_from_labels(audio_file, segments):
+    """
+    For each label, extract the features from its segment and returns the list
+    with the features from all of them.
+    """
+    segments_features = []
+    #for each segment
+    for segment in segments:
+        features = features_from_label(audio_file, segment)
+        #and append it to the list
+        segments_features.append(features)
+    return segments_features
+
+def features_from_label(audio_file, segment):
+    """
+    Using the label, extract the features from the segment defined
+    by the label.
+    """
+    duration = segment['end'] - segment['start']
+    audio, sample_rate = librosa.core.load(
+        audio_file,
+        duration=duration,
+        offset=segment['start']
+    )
+    features = fe.get_features(audio, sample_rate)
+    return features
 
 
-#Compute the names for the input and output
-files_list = os.listdir("../capturas/testelabel")
+def main(input_path):
+    """
+    main foo
+    """
+    #Compute the names for the input and output
+    files_list = os.listdir(input_path)
 
-#create list of arguments
-for filename in files_list:
-    for ln in get_labels(os.path.join("../capturas/testelabel", filename)):
-        print(ln['start'])
+    #create list of .txt files
+    label_files = []
+    audio_files = []
+    for filename in files_list:
+        #get its extension
+        file_extension = filename.split('.')[-1]
+        #save in the right list
+
+        if file_extension == 'txt':
+            label_files.append(filename)
+        elif file_extension == 'wav':
+            audio_files.append(filename)
+        elif not file_extension.startswith('atr'):
+            print('Ignoring', filename, 'because of unrecognized extension.')
+
+    #for each label file
+    for label_file in label_files:
+        #find matching .wav file
+        filename = label_file.split('.')[-2]
+        match = ''
+        for audio_file in audio_files:
+            if audio_file.split('.')[-2] == filename:
+                match = audio_file
+                break
+        #found a match
+        if match != '':
+            #extract segments
+            segments = get_segments(os.path.join(input_path, label_file))
+            #get the names
+            audio_file = os.path.join(input_path, match)
+            bin_folder = os.path.join(input_path, 'features')
+            total = len(segments)
+            i = 1
+            print('Extracting features from each segment in', match + '.')
+            for segment in segments:
+                print(str(i) + '/' + str(total))
+                #get the features from the segment
+                features = features_from_label(audio_file, segment)
+                bin_filename = filename + '-' + segment['class'] + '-' + format(i, '02d')
+                bin_path = os.path.join(bin_folder, bin_filename)
+                #save them to file
+                fe.write_as_bin(bin_path, features)
+                i += 1
+            print('Done with', match + '.')
+        else:
+            print('Couldn\'t find a match with file', label_file + '.')
+    print('All done. Bye')
+
+if __name__ == '__main__':
+    main("../capturas/testelabel")
