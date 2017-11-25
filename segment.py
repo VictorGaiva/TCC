@@ -1,15 +1,9 @@
 """Extracts the features from the .wav files"""
 import os
-import csv
-import sys
-
-#import multiprocessing
-import time
 
 import librosa
 import librosa.display
 
-import numpy as np
 import feature_extraction as fe
 
 def get_segments(input_path):

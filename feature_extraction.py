@@ -1,16 +1,14 @@
-"""Extracts the features from the .wav files"""
+"""Routines for extraction features from audio files and saving them to disk"""
 import os
 import csv
 import sys
 
-#import multiprocessing
 import time
 
 import librosa
 import librosa.display
 
 import numpy as np
-#import matplotlib.pyplot as plt
 
 def extract_from_folder(input_directory, output_directory):
     """
