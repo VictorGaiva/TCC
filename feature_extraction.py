@@ -116,16 +116,36 @@ def write_as_csv(filepath, data):
         for line in data:
             spam_writer.writerow(line)
 
-def write_as_bin(filepath, data):
+def write_as_bin(filepath, data, ):
     """
     Writes given data into the given file as a binary file
-    The extension of the output file starts with '.atr' and ends with
-    the number of atributes corresponding to onde frame
+    The extension of the output file starts with '.atr'.
     """
     bin_data = data.flatten().tobytes()
     ext = '.atr' + format(len(data[0]), '02d')
     with open(filepath + ext, 'wb') as bin_file:
         bin_file.write(bin_data)
+
+def open_atr_file(filepath):
+    """
+    Opens the .atr file and returns a ndarray containing its data
+    """
+    try:
+        #get files data
+        atr_file = open(filepath, 'rb')
+        data = atr_file.read()
+        #get the depth
+        ext = filepath.split('.')[-1]
+        depth = int(ext[3:])
+        #turn data into lists
+        data = np.frombuffer(data)
+        data = np.split(data, len(data)/depth)
+        features = np.array(data)
+        return features
+    except FileNotFoundError:
+        print('File not found.')
+        return None
+    return None
 
 def main():
     """
