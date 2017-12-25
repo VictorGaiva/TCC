@@ -31,6 +31,29 @@ def get_data(data_path=""):
         print("Just open and return it.")
     return [0, 0, 0]
 
+def normalize_batch(batch, config=None):
+    """
+    Receives a batch and normalize each collum based on given interval
+    """
+    #
+    batch = np.transpose(batch)
+
+    for val in range(0, len(batch)):
+        if config is None:
+            min_val = min(batch[val])
+            max_val = max(batch[val])
+        else:
+            if config["atributes"]["input_options"][val]["need_normalization"]:
+                min_val = config["atributes"]["input_options"][val]["min"]
+                max_val = config["atributes"]["input_options"][val]["max"]
+            else:
+                continue
+
+        batch[val] = (batch[val]-min_val)/(max_val-min_val)
+
+    batch = np.transpose(batch)
+    return batch
+
 def make_batches(input_folder="./dataset", output_folder="./batches", config=None):
     """
     Creates each batch of the dataset
@@ -55,15 +78,15 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
             print("Error in creating output folder.")
             return -1
     #Config
-    train = 0.7
-    validate = 0.2
-    test = 0.1
+    train = config["proportions"]["train"]
+    validate = config["proportions"]["validate"]
+    test = config["proportions"]["test"]
     tags = {
         "vinheta":   [1, 0, 0],
         "propaganda":[0, 1, 0],
         "talk":      [0, 0, 1]
     }
-    my_seed = 42
+    my_seed = config["proportions"]["seed"]
 
     #list the files inside the input folder
     filenames = os.listdir(input_folder)
@@ -81,6 +104,11 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
     train_x, train_y = make_batch(input_folder, tr_batch, tags)
     validate_x, validate_y = make_batch(input_folder, vl_batch, tags)
     test_x, test_y = make_batch(input_folder, te_batch, tags)
+
+    #normalize each one
+    train_x = normalize_batch(train_x, config)
+    validate_x = normalize_batch(validate_x, config)
+    test_x = normalize_batch(test_x, config)
 
     #save them
     fe.write_as_bin(os.path.join(output_folder, "train_x"), train_x)
