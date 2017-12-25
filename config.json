@@ -10,7 +10,7 @@
                 "length":1,
                 "need_normalization":false,
                 "min":0,
-                "max":0
+                "max":1
             },
             {
                 "name":"zercr",
@@ -18,31 +18,31 @@
                 "length":1,
                 "need_normalization":false,
                 "min":0,
-                "max":0
+                "max":1
             },
             {
                 "name":"centr",
                 "pos":2,
                 "length":1,
-                "need_normalization":false,
+                "need_normalization":true,
                 "min":0,
-                "max":0
+                "max":8192
             },
             {
                 "name":"bandw",
                 "pos":3,
                 "length":1,
-                "need_normalization":false,
+                "need_normalization":true,
                 "min":0,
-                "max":0
+                "max":8192
             },
             {
                 "name":"rloff",
                 "pos":4,
                 "length":1,
-                "need_normalization":false,
+                "need_normalization":true,
                 "min":0,
-                "max":0
+                "max":16384
             }
         ],
         "output_options":[
