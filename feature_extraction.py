@@ -116,7 +116,7 @@ def write_as_csv(filepath, data):
         for line in data:
             spam_writer.writerow(line)
 
-def write_as_bin(filepath, data, ):
+def write_as_bin(filepath, data):
     """
     Writes given data into the given file as a binary file
     The extension of the output file starts with '.atr'.
@@ -125,6 +125,12 @@ def write_as_bin(filepath, data, ):
     ext = '.atr' + format(len(data[0]), '02d')
     with open(filepath + ext, 'wb') as bin_file:
         bin_file.write(bin_data)
+
+def label_from_filename(filename):
+    """
+    Returns the label for given file, if it is an .atr05 file
+    """
+    return filename.split('-')[0]
 
 def open_atr_file(filepath):
     """
