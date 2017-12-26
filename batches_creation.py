@@ -61,6 +61,7 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
 
     #try to get the configurations
     if not config:
+        print("Loading configurations from config.json file.")
         config = get_config()
         if not config:
             print("Couldn't load configuration file.")
@@ -101,22 +102,31 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
     te_batch = filenames[int(len(filenames)*(train+validate)):]
 
     #make the batches
+    print("Making train batch... ", end='')
     train_x, train_y = make_batch(input_folder, tr_batch, tags)
+    print("Done")
+    print("Making validation batch... ", end='')
     validate_x, validate_y = make_batch(input_folder, vl_batch, tags)
+    print("Done")
+    print("Making test batch... ", end='')
     test_x, test_y = make_batch(input_folder, te_batch, tags)
+    print("Done")
 
     #normalize each one
+    print("Normalizing batches.")
     train_x = normalize_batch(train_x, config)
     validate_x = normalize_batch(validate_x, config)
     test_x = normalize_batch(test_x, config)
 
     #save them
+    print("Writing them to disk... ", end='')
     fe.write_as_bin(os.path.join(output_folder, "train_x"), train_x)
     fe.write_as_bin(os.path.join(output_folder, "train_y"), train_y)
     fe.write_as_bin(os.path.join(output_folder, "validate_x"), validate_x)
     fe.write_as_bin(os.path.join(output_folder, "validate_y"), validate_y)
     fe.write_as_bin(os.path.join(output_folder, "test_x"), test_x)
     fe.write_as_bin(os.path.join(output_folder, "test_y"), test_y)
+    print("Done")
 
 def make_batch(folder_path, filenames, tags, config=None):
     """
