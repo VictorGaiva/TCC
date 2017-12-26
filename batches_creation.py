@@ -89,6 +89,9 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
     }
     my_seed = config["proportions"]["seed"]
 
+    if train + validate + test != 1.0:
+        print("WARNING: Proportions don't add to one.", train + validate + test)
+
     #list the files inside the input folder
     filenames = os.listdir(input_folder)
 
