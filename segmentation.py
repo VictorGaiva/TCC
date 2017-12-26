@@ -87,6 +87,7 @@ def features_from_folder(label_folder, audio_folder, output_folder):
 
     print('Processing each file...')
     i = 1
+    class_count = {}
     total_f = len(files_to_process)
     #for each file
     for processing in files_to_process:
@@ -101,7 +102,6 @@ def features_from_folder(label_folder, audio_folder, output_folder):
         segments = get_segments(label_file)
 
         #
-        class_count = {}
         total_s = len(segments)
         j = 1
         #for each segment
