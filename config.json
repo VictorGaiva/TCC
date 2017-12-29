@@ -54,5 +54,6 @@
         "train":0.7,
         "validate":0.2,
         "test":0.1
-    }
+    },
+    "boundaries":false
 }
