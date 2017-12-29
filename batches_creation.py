@@ -5,6 +5,7 @@ import json
 import sys
 import os
 import random
+import time
 import numpy as np
 
 import feature_extraction as fe
@@ -39,16 +40,11 @@ def normalize_batch(batch, config=None):
     batch = np.transpose(batch)
 
     for val in range(0, len(batch)):
-        if config is None:
-            min_val = min(batch[val])
-            max_val = max(batch[val])
+        if config["atributes"]["input_options"][val]["need_normalization"]:
+            min_val = config["atributes"]["input_options"][val]["min"]
+            max_val = config["atributes"]["input_options"][val]["max"]
         else:
-            if config["atributes"]["input_options"][val]["need_normalization"]:
-                min_val = config["atributes"]["input_options"][val]["min"]
-                max_val = config["atributes"]["input_options"][val]["max"]
-            else:
-                continue
-
+            continue
         batch[val] = (batch[val]-min_val)/(max_val-min_val)
 
     batch = np.transpose(batch)
@@ -89,7 +85,7 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
     }
     my_seed = config["proportions"]["seed"]
 
-    if train + validate + test != 1.0:
+    if train + validate + test < 1.0:
         print("WARNING: Proportions don't add to one.", train + validate + test)
 
     #list the files inside the input folder
@@ -137,9 +133,9 @@ def make_batch(folder_path, filenames, tags, config=None):
     and returns it with its labels, set by the tags argument
     """
     #init
-    labels_shape = (0, len(next(iter(tags.values()))))
+    labels_depth = len(next(iter(tags.values())))
     x_train = np.empty(shape=(0, 5))
-    y_train = np.empty(shape=labels_shape)
+    y_train = np.empty(shape=(0, labels_depth))
 
     #for each file
     for filename in filenames:
@@ -159,6 +155,9 @@ def make_batch(folder_path, filenames, tags, config=None):
             fill_value=tags[label]
         )
         y_train = np.vstack([y_train, labels])
+        if config is not None and config["boundaries"]:
+            x_train = np.vstack([x_train, np.ones(1, 5)])
+            y_train = np.vstack([y_train, np.ones(1, labels_depth)])
     return [x_train, y_train]
 
 def main():
