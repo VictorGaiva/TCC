@@ -3,7 +3,7 @@ Pipelines everything. From the segmentation, feature extration, preprocessing an
 """
 import segmentation as se
 import batches_creation as bc
-
+import classifier as cl
 def main():
     """
     Where the magic happens
@@ -15,11 +15,13 @@ def main():
 
     #Extract the features into the folder
     print("Starting features extraction.")
-    se.features_from_folder(labels_path, audios_path, features_path)
+    #se.features_from_folder(labels_path, audios_path, features_path)
 
     #make the batches
-    bc.make_batches(features_path, batches_path)
+    #bc.make_batches(features_path, batches_path)
 
-    
+    #start network
+    cl.train(batches_path, "./output.txt", 10)
+
 if __name__ == '__main__':
     main()
