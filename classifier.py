@@ -7,27 +7,29 @@ from keras import layers
 from keras import optimizers
 from feature_extraction import open_atr_file
 
-def train(input_path, output, window_size):
+def supp_vec_machine():
     """
-    Uses the batches in the input folder to train the NN
+    Support vector machine implementation
     """
-    #get datasets
-    x_train = open_atr_file(input_path + "/train_x.atr05")
-    y_train = open_atr_file(input_path + "/train_y.atr03")
-    x_test = open_atr_file(input_path + "/validate_x.atr05")
-    y_test = open_atr_file(input_path + "/validate_y.atr03")
+    return "damn"
 
-    #reshape
-    x_train, y_train = reshape(x_train, y_train, window_size)
-    x_test, y_test = reshape(x_test, y_test, window_size)
-
+def neural_network(epochs, x_train, y_train, x_test, y_test, neurons, batch_size, dropout):
+    """
+    Runs a training and testing session using given parameters
+    """
     #create the model
     model = models.Sequential()
+
     #init the layers
-    model.add(layers.Dense(32, input_dim=len(x_train[0]), activation='relu'))
-    model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(64, activation='relu'))
-    model.add(layers.Dropout(0.5))
+    first_layer = neurons.pop(9)
+    model.add(layers.Dense(first_layer, input_dim=len(x_train[0]), activation='relu'))
+    model.add(layers.Dropout(dropout))
+
+    for layer in neurons:
+        model.add(layers.Dense(layer, activation='relu'))
+        model.add(layers.Dropout(dropout))
+
+    model.add(layers.Dropout(dropout))
     model.add(layers.Dense(3, activation='softmax'))
 
     #opt
@@ -44,33 +46,15 @@ def train(input_path, output, window_size):
     model.fit(
         x_train,
         y_train,
-        epochs=50,
-        batch_size=128
+        epochs=epochs,
+        batch_size=batch_size
     )
 
     #
-    score = model.evaluate(x_test, y_test, batch_size=128)
+    score = model.evaluate(x_test, y_test, batch_size=batch_size)
 
-    print(score)
+    return score
 
-def reshape(datax, datay, window_size):
-    """
-    Reshapes the input
-    """
-    #fit the data
-    while len(datax)%window_size != 0:
-        datax = datax[:-1]
-        datay = datay[:-1]
-
-    #reshape datax
-    new_datax = datax.flatten()
-    new_datax = np.reshape(new_datax, (-1, len(datax[0])*window_size))
-
-    #reshape datay
-    new_datay = np.zeros(shape=(int(len(datay)/window_size), 3))
-    for i in range(0, int(len(datay)/window_size)):
-        new_datay[i] = datay[i*window_size]
-    return [new_datax, new_datay]
 
 def main():
     """
