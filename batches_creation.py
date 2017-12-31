@@ -77,7 +77,6 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
     #Config
     train = config["proportions"]["train"]
     validate = config["proportions"]["validate"]
-    test = config["proportions"]["test"]
     tags = {
         "vinheta":   [1, 0, 0],
         "propaganda":[0, 1, 0],
@@ -85,8 +84,8 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
     }
     my_seed = config["proportions"]["seed"]
 
-    if train + validate + test < 1.0:
-        print("WARNING: Proportions don't add to one.", train + validate + test)
+    if train + validate < 1.0:
+        print("WARNING: Proportions don't add to one.", train + validate)
 
     #list the files inside the input folder
     filenames = os.listdir(input_folder)
@@ -97,8 +96,7 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
 
     #split the files in batches
     tr_batch = filenames[:int(len(filenames)*train)]
-    vl_batch = filenames[int(len(filenames)*train):int(len(filenames)*(train+validate))]
-    te_batch = filenames[int(len(filenames)*(train+validate)):]
+    vl_batch = filenames[int(len(filenames)*train):]
 
     #make the batches
     print("Making train batch... ", end='')
@@ -107,15 +105,11 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
     print("Making validation batch... ", end='')
     validate_x, validate_y = make_batch(input_folder, vl_batch, tags)
     print("Done")
-    print("Making test batch... ", end='')
-    test_x, test_y = make_batch(input_folder, te_batch, tags)
-    print("Done")
 
     #normalize each one
     print("Normalizing batches.")
     train_x = normalize_batch(train_x, config)
     validate_x = normalize_batch(validate_x, config)
-    test_x = normalize_batch(test_x, config)
 
     #save them
     print("Writing them to disk... ", end='')
@@ -123,8 +117,6 @@ def make_batches(input_folder="./dataset", output_folder="./batches", config=Non
     fe.write_as_bin(os.path.join(output_folder, "train_y"), train_y)
     fe.write_as_bin(os.path.join(output_folder, "validate_x"), validate_x)
     fe.write_as_bin(os.path.join(output_folder, "validate_y"), validate_y)
-    fe.write_as_bin(os.path.join(output_folder, "test_x"), test_x)
-    fe.write_as_bin(os.path.join(output_folder, "test_y"), test_y)
     print("Done")
 
 def make_batch(folder_path, filenames, tags, config=None):
