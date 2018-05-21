@@ -1,7 +1,7 @@
 {
     "_commentary": "Metadados sobre os atributos e configuracoes de como ele deve ser processado.",
     
-    "atributes":{
+    "attributes":{
         "extension":"atr05",
         "input_options":[
             {
