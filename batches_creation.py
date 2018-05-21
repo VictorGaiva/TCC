@@ -40,9 +40,9 @@ def normalize_batch(batch, config=None):
     batch = np.transpose(batch)
 
     for val in range(0, len(batch)):
-        if config["atributes"]["input_options"][val]["need_normalization"]:
-            min_val = config["atributes"]["input_options"][val]["min"]
-            max_val = config["atributes"]["input_options"][val]["max"]
+        if config["attributes"]["input_options"][val]["need_normalization"]:
+            min_val = config["attributes"]["input_options"][val]["min"]
+            max_val = config["attributes"]["input_options"][val]["max"]
         else:
             continue
         batch[val] = (batch[val]-min_val)/(max_val-min_val)
